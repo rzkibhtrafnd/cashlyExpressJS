@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Users
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(kasir)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Role {
+  admin
+  kasir
+}
+
+// Category
+model Category{
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relasi Product
+  products Product[]
+  @@map("categories")
+}
+
+// Product
+model Product{
+  id          Int      @id @default(autoincrement())
+  categoryId  Int      
+  name        String
+  price       Decimal  @db.Decimal(12, 2)
+  image       String?  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relasi Kategori
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("products")
+}
