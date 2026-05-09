@@ -1,11 +1,9 @@
-const prisma = require('../config/database');
+const categoryService = require('../services/categoryService');
 
 const categoryController = {
     // Index
     getAll: async (req, res) => {
-        const categories = await prisma.category.findMany({
-            orderBy: { id: 'desc' }
-        });
+        const categories = await categoryService.getAllCategories();
         res.json({ status: true, message: 'Daftar kategori berhasil diambil', data: categories });
     },
 
@@ -17,19 +15,7 @@ const categoryController = {
             return res.status(400).json({ status: false, message: 'Nama kategori wajib diisi' });
         }
 
-        // cek nama sama
-        const existingCategory = await prisma.category.findFirst({
-            where: { name: name }
-        });
-
-        if (existingCategory) {
-            return res.status(400).json({ status: false, message: 'Nama kategori sudah digunakan, silakan gunakan nama lain' });
-        }
-
-        const category = await prisma.category.create({
-            data: { name }
-        });
-
+        const category = await categoryService.createCategory({ name });
         res.status(201).json({ status: true, message: 'Kategori berhasil ditambahkan', data: category });
     },
 
@@ -38,31 +24,11 @@ const categoryController = {
         const { id } = req.params;
         const { name } = req.body;
 
-        // Cek Kategori
-        const existingCategory = await prisma.category.findUnique({ where: { id: Number(id) } });
-        if (!existingCategory) {
-            return res.status(404).json({ status: false, message: 'Kategori tidak ditemukan' });
+        if (!name) {
+            return res.status(400).json({ status: false, message: 'Nama kategori wajib diisi' });
         }
 
-        // Cek nama sama
-        if (name && name !== existingCategory.name) {
-            const duplicateCategory = await prisma.category.findFirst({
-                where: { 
-                    name: name,
-                    id: { not: Number(id) }
-                }
-            });
-
-            if (duplicateCategory) {
-                return res.status(400).json({ status: false, message: 'Nama kategori sudah digunakan, silakan gunakan nama lain' });
-            }
-        }
-
-        const category = await prisma.category.update({
-            where: { id: Number(id) },
-            data: { name }
-        });
-
+        const category = await categoryService.updateCategory(id, { name });
         res.json({ status: true, message: 'Kategori berhasil diperbarui', data: category });
     },
 
@@ -70,16 +36,8 @@ const categoryController = {
     delete: async (req, res) => {
         const { id } = req.params;
 
-        // Cek Kategori
-        const existingCategory = await prisma.category.findUnique({ where: { id: Number(id) } });
-        if (!existingCategory) {
-            return res.status(404).json({ status: false, message: 'Kategori tidak ditemukan' });
-        }
-
-        await prisma.category.delete({
-            where: { id: Number(id) }
-        });
-
+        // Semua logika cek ID & hapus ada di service
+        await categoryService.deleteCategory(id);
         res.json({ status: true, message: 'Kategori berhasil dihapus' });
     }
 };

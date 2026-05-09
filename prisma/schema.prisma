@@ -7,6 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Token Blacklist
+model TokenBlacklist {
+  id        Int      @id @default(autoincrement())
+  token     String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@map("token_blacklists")
+}
+
 // Users
 model User {
   id        Int      @id @default(autoincrement())

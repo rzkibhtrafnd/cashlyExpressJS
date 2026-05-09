@@ -1,70 +1,50 @@
-const prisma = require('../config/database');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const authService = require('../services/authService');
 
 const authController = {
     // Register
     register: async (req, res) => {
-        const {name, email, password, role} = req.body;
+        const { name, email, password, role } = req.body;
 
-        // validasi email
-        const existingUser = await prisma.user.findUnique({
-            where: { email: email }
-        });
-
-        if (existingUser) {
-            return res.status(400).json({ status: false, message: 'Email sudah terdaftar' });
+        // Validasi input kosong
+        if (!name || !email || !password) {
+            return res.status(400).json({ status: false, message: 'Nama, email, dan password wajib diisi' });
         }
 
-        // hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Simpan user
-        const defaultRole = role || 'user';
-
-        await prisma.user.create({
-            data: {
-                name: name,
-                email: email,
-                password: hashedPassword,
-                role: defaultRole
-            }
-        });
-
-        res.status(201).json({ status: true, message: 'User berhasil didaftarkan', data: { name, email, role: defaultRole } });
+        const user = await authService.register({ name, email, password, role });
+        res.status(201).json({ status: true, message: 'User berhasil didaftarkan', data: user });
     },
 
     // Login
     login: async (req, res) => {
-        const {email, password} = req.body;
+        const { email, password } = req.body;
 
-        // Cek user
-        const user = await prisma.user.findUnique({
-            where: { email: email }
+        if (!email || !password) {
+            return res.status(400).json({ status: false, message: 'Email dan password wajib diisi' });
+        }
+
+        const result = await authService.login({ email, password });
+        res.status(200).json({
+            status: true,
+            message: 'Login berhasil',
+            token: result.token,
+            user: result.user
         });
-        if (!user) {
-            return res.status(400).json({ status: false, message: 'Email tidak ditemukan' });
+    },
+
+    // Logout
+    logout: async (req, res) => {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(400).json({ status: false, message: 'Token tidak ditemukan' });
         }
 
-        // Cek password
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-            return res.status(400).json({ status: false, message: 'Password salah' });
-        }
-
-        // Generate token
-        const token = jwt.sign(
-            { id: user.id, role: user.role }, 
-            process.env.JWT_SECRET, 
-            { expiresIn: '1d' }
-        );
+        await authService.logout(token);
 
         res.status(200).json({ 
             status: true, 
-            message: 'Login berhasil', 
-            token,
-            user: { id: user.id, name: user.name, role: user.role }
+            message: 'Logout berhasil. Akses dengan token ini telah ditutup dari server.' 
         });
     }
 };

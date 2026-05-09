@@ -1,25 +1,33 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../config/database');
 
-// Middleware untuk mengecek apakah user punya token yang valid
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
     if (!token) {
-        return res.status(403).json({ status: false, message: 'Token tidak disediakan' });
+        return res.status(401).json({ status: false, message: 'Akses ditolak: Token tidak ditemukan' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
-            return res.status(401).json({ status: false, message: 'Token tidak valid atau kedaluwarsa' });
+    try {
+        // Cek Blaclist Token
+        const isBlacklisted = await prisma.tokenBlacklist.findFirst({
+            where: { token: token }
+        });
+
+        if (isBlacklisted) {
+            return res.status(401).json({ status: false, message: 'Akses ditolak: Token sudah tidak berlaku (Silakan login kembali)' });
         }
-        
-        req.user = decoded;
+
+        // Cek Token asli
+        const verified = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = verified;
         next();
-    });
+
+    } catch (err) {
+        return res.status(401).json({ status: false, message: 'Akses ditolak: Token tidak valid atau kedaluwarsa' });
+    }
 };
 
-// Middleware untuk membatasi akses berdasarkan Role
 const authorizeRole = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user || !allowedRoles.includes(req.user.role)) {

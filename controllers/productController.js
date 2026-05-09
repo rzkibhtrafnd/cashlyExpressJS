@@ -1,115 +1,43 @@
-const prisma = require('../config/database');
+const productService = require('../services/productService');
 
 const productController = {
-    // Index
     getAll: async (req, res) => {
-        const products = await prisma.product.findMany({
-            orderBy: { id: 'desc' },
-            include: { category: true }
-        });
+        const products = await productService.getAllProducts();
         res.json({ status: true, message: 'Daftar produk berhasil diambil', data: products });
     },
 
-    // Store
+    getById: async (req, res) => {
+        const product = await productService.getProductById(req.params.id);
+        res.json({ status: true, message: 'Detail produk berhasil diambil', data: product });
+    },
+
     create: async (req, res) => {
-        const { categoryId, name, price } = req.body;
-        const image = req.file ? req.file.filename : null;
+        const data = {
+            categoryId: req.body.categoryId,
+            name: req.body.name,
+            price: req.body.price,
+            image: req.file ? req.file.filename : null
+        };
 
-        // Cek apakah kategori valid
-        const categoryExists = await prisma.category.findUnique({
-            where: { id: Number(categoryId) }
-        });
-
-        if (!categoryExists) {
-            return res.status(400).json({ status: false, message: 'Kategori tidak valid' });
-        }
-
-        const product = await prisma.product.create({
-            data: {
-                categoryId: parseInt(categoryId),
-                name,
-                price: parseFloat(price),
-                image: image
-            },
-            include: { category: true }
-        });
-
+        const product = await productService.createProduct(data);
         res.status(201).json({ status: true, message: 'Produk berhasil ditambahkan', data: product });
     },
 
-    // Show
-    getById: async (req, res) => {
-        const { id } = req.params;
-
-        const product = await prisma.product.findUnique({
-            where: { id: Number(id) },
-            include: { category: true }
-        });
-
-        if (!product) {
-            return res.status(404).json({ status: false, message: 'Produk tidak ditemukan' });
-        }
-
-        res.json({ status: true, message: 'Detail produk berhasil diambil', data: product });
-    },
-    
-    // Update
     update: async (req, res) => {
-        const { id } = req.params;
-        const { categoryId, name, price } = req.body;
-        const image = req.file ? req.file.filename : null;
+        const data = {
+            categoryId: req.body.categoryId,
+            name: req.body.name,
+            price: req.body.price,
+            newImage: req.file ? req.file.filename : null
+        };
 
-        // Cek produk
-        const existingProduct = await prisma.product.findUnique({
-            where: { id: Number(id) }
-        });
-
-        if (!existingProduct) {
-            return res.status(404).json({ status: false, message: 'Produk tidak ditemukan' });
-        }
-
-        // Cek kategori
-        if (categoryId) {
-            const categoryExists = await prisma.category.findUnique({
-                where: { id: Number(categoryId) }
-            });
-
-            if (!categoryExists) {
-                return res.status(400).json({ status: false, message: 'Kategori tidak valid' });
-            }
-        }
-
-        const updatedProduct = await prisma.product.update({
-            where: { id: Number(id) },
-            data: {
-                categoryId: categoryId ? parseInt(categoryId) : existingProduct.categoryId,
-                name: name || existingProduct.name,
-                price: price ? parseFloat(price) : existingProduct.price,
-                image: image || existingProduct.image
-            },
-            include: { category: true }
-        });
-
-        res.json({ status: true, message: 'Produk berhasil diperbarui', data: updatedProduct });
+        const product = await productService.updateProduct(req.params.id, data);
+        res.json({ status: true, message: 'Produk berhasil diperbarui', data: product });
     },
 
-    // Delete
     delete: async (req, res) => {
-        const { id } = req.params;
-
-        const product = await prisma.product.findUnique({
-            where: { id: Number(id) }
-        });
-
-        if (!product) {
-            return res.status(404).json({ status: false, message: 'Produk tidak ditemukan' });
-        }
-
-        await prisma.product.delete({
-            where: { id: Number(id) }
-        });
-
-        res.json({ status: true, message: 'Produk berhasil dihapus' });
+        await productService.deleteProduct(req.params.id);
+        res.json({ status: true, message: 'Produk berhasil dihapus beserta gambarnya' });
     }
 };
 

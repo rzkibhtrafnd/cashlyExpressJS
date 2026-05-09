@@ -4,17 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const productController = require('../controllers/productController');
 const { verifyToken, authorizeRole } = require('../middlewares/authMiddleware');
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'public/uploads/');
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
+const upload = require('../middlewares/uploadMiddleware');
 
 router.get('/', verifyToken, authorizeRole('admin', 'kasir'), productController.getAll);
 router.post('/', verifyToken, authorizeRole('admin', 'kasir'), upload.single('image'), productController.create);
