@@ -26,6 +26,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  transactions Transaction[]
+
   @@map("users")
 }
 
@@ -58,6 +60,56 @@ model Product{
 
   // Relasi Kategori
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
+  transactionItems TransactionItem[]
   @@map("products")
+}
+
+// Setting
+model Setting {
+  id            Int      @id @default(autoincrement())
+  companyName   String?
+  email         String?
+  phone         String?
+  address       String?
+  wifi          String?
+  wifiPassword  String?
+  imgLogo       String?
+  imgQris       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Transaction {
+  id             Int               @id @default(autoincrement())
+  userId         Int
+  total          Decimal           @db.Decimal(10, 2)
+  paymentMethod  String            @default("cash") // cash, qris
+  paymentStatus  String            @default("paid") // pending, paid, failed
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  
+  // Relasi
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          TransactionItem[]
+
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            Int         @id @default(autoincrement())
+  transactionId Int
+  productId     Int
+  qty           Int
+  price         Decimal     @db.Decimal(10, 2)
+  subtotal      Decimal     @db.Decimal(10, 2)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relasi
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_items")
 }

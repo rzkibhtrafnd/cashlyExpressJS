@@ -20,7 +20,6 @@ const productService = {
                 }
             },
             orderBy: { id: 'desc' },
-            include: { category: true }
         });
     },
 
@@ -41,7 +40,6 @@ const productService = {
                 }
             },
             where: { id: Number(id) },
-            include: { category: true }
         });
 
         if (!product) {
@@ -87,7 +85,6 @@ const productService = {
                     }
                 }
             },
-            include: { category: true }
         });
     },
 
@@ -146,7 +143,6 @@ const productService = {
                     }
                 }
             },
-            include: { category: true }
         });
     },
 
