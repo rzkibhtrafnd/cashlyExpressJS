@@ -1,45 +1,37 @@
 const userService = require('../services/userService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
 const userController = {
-    getAll: async (req, res) => {
+    getAll: asyncHandler(async (req, res) => {
         const users = await userService.getAllUsers();
         res.json({ status: true, message: 'Daftar pengguna berhasil diambil', data: users });
-    },
+    }),
 
-    getById: async (req, res) => {
+    getById: asyncHandler(async (req, res) => {
         const user = await userService.getUserById(req.params.id);
         res.json({ status: true, message: 'Detail pengguna berhasil diambil', data: user });
-    },
+    }),
 
-    create: async (req, res) => {
-        const data = {
-            name: req.body.name,
-            email: req.body.email,
-            password: req.body.password,
-            role: req.body.role
-        };
+    create: asyncHandler(async (req, res) => {
+        if (!req.body.name || !req.body.email || !req.body.password) {
+            const error = new Error('Nama, email, dan password wajib diisi');
+            error.statusCode = 400;
+            throw error; 
+        }
 
-        const user = await userService.createUser(data);
+        const user = await userService.createUser(req.body);
         res.status(201).json({ status: true, message: 'Pengguna berhasil ditambahkan', data: user });
-    },
+    }),
 
-    update: async (req, res) => {
-        const id = req.params.id;
-        const data = {
-            name: req.body.name,
-            email: req.body.email,
-            password: req.body.password,
-            role: req.body.role
-        };
-
-        const user = await userService.updateUser(id, data);
+    update: asyncHandler(async (req, res) => {
+        const user = await userService.updateUser(req.params.id, req.body);
         res.json({ status: true, message: 'Pengguna berhasil diperbarui', data: user });
-    },
+    }),
 
-    delete: async (req, res) => {
+    delete: asyncHandler(async (req, res) => {
         await userService.deleteUser(req.params.id);
         res.json({ status: true, message: 'Pengguna berhasil dihapus' });
-    }
+    })
 };
 
 module.exports = userController;

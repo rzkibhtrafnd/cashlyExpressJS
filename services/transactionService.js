@@ -2,8 +2,9 @@ const prisma = require('../config/database');
 
 const transactionService = {
     getAll: async (user, month, year, page = 1) => {
+        const currentPage = Math.max(1, Number(page) || 1); 
         const limit = 10;
-        const skip = (page - 1) * limit;
+        const skip = (currentPage - 1) * limit;
 
         let whereClause = {};
         if (user.role !== 'admin') {
@@ -11,42 +12,31 @@ const transactionService = {
         }
 
         if (month && year) {
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0, 23, 59, 59);
-            whereClause.createdAt = {
-                gte: startDate,
-                lte: endDate
-            };
+            const m = Number(month);
+            const y = Number(year);
+            const startDate = new Date(y, m - 1, 1);
+            const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+            whereClause.createdAt = { gte: startDate, lte: endDate };
         }
 
-        const transactions = await prisma.transaction.findMany({
-            where: whereClause,
-            select: {
-                id: true,
-                userId: true,
-                total: true,
-                paymentMethod: true,
-                paymentStatus: true,
-                createdAt: true,
-                updatedAt: true,
-                user: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
-                }
-            },
-            orderBy: { createdAt: 'desc' },
-            skip: skip,
-            take: limit
-        });
-
-        const totalItems = await prisma.transaction.count({ where: whereClause });
+        const [transactions, totalItems] = await Promise.all([
+            prisma.transaction.findMany({
+                where: whereClause,
+                select: {
+                    id: true, userId: true, total: true, paymentMethod: true, paymentStatus: true, createdAt: true,
+                    user: { select: { id: true, name: true } }
+                },
+                orderBy: { createdAt: 'desc' },
+                skip: skip,
+                take: limit
+            }),
+            prisma.transaction.count({ where: whereClause })
+        ]);
 
         return {
             data: transactions,
             meta: {
-                page: Number(page),
+                page: currentPage,
                 limit,
                 totalItems,
                 totalPages: Math.ceil(totalItems / limit)
@@ -63,110 +53,71 @@ const transactionService = {
             throw error;
         }
 
-        const productIds = cart.map(item => item.id);
+        const productIds = [...new Set(cart.map(item => Number(item.id)))];
 
         const actualProducts = await prisma.product.findMany({
-            where: {
-                id: { in: productIds }
-            },
+            where: { id: { in: productIds } },
             select: { id: true, price: true }
         });
 
         const priceMap = {};
-        actualProducts.forEach(product => {
-            priceMap[product.id] = Number(product.price);
-        });
+        actualProducts.forEach(p => { priceMap[p.id] = Number(p.price); });
 
         let calculatedTotal = 0;
         const validItems = [];
 
-        for (const item of cart) {
-            const actualPrice = priceMap[item.id];
+        const groupedCart = cart.reduce((acc, item) => {
+            const id = Number(item.id);
+            if (!acc[id]) acc[id] = 0;
+            acc[id] += Number(item.qty);
+            return acc;
+        }, {});
+
+        for (const [idStr, qty] of Object.entries(groupedCart)) {
+            const productId = Number(idStr);
+            const actualPrice = priceMap[productId];
 
             if (actualPrice === undefined) {
-                const error = new Error(`Produk dengan ID ${item.id} tidak ditemukan atau sudah dihapus`);
+                const error = new Error(`Produk dengan ID ${productId} tidak ditemukan atau sudah dihapus`);
                 error.statusCode = 404;
-                throw error;
-            }
-
-            const qty = Number(item.qty);
-            if (qty < 1) {
-                const error = new Error(`Kuantitas produk tidak valid`);
-                error.statusCode = 400;
                 throw error;
             }
 
             const subtotal = qty * actualPrice;
             calculatedTotal += subtotal;
 
-            validItems.push({
-                productId: item.id,
-                qty: qty,
-                price: actualPrice,
-                subtotal: subtotal
-            });
+            validItems.push({ productId, qty, price: actualPrice, subtotal });
         }
 
-        const transaction = await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx) => {
             const newTrx = await tx.transaction.create({
                 data: {
-                    userId: userId,
+                    userId: Number(userId),
                     total: calculatedTotal,
                     paymentMethod: paymentMethod || 'cash',
-                    paymentStatus: 'paid'
-                }
-            });
-
-            const itemsData = validItems.map(item => ({
-                transactionId: newTrx.id,
-                productId: item.productId,
-                qty: item.qty,
-                price: item.price,
-                subtotal: item.subtotal
-            }));
-
-            await tx.transactionItem.createMany({
-                data: itemsData
+                    paymentStatus: 'paid',
+                    items: {
+                        create: validItems.map(item => ({
+                            productId: item.productId,
+                            qty: item.qty,
+                            price: item.price,
+                            subtotal: item.subtotal
+                        }))
+                    }
+                },
+                include: { items: true } 
             });
 
             return newTrx;
         });
-
-        return transaction;
     },
 
     show: async (id, user) => {
         const transaction = await prisma.transaction.findUnique({
             where: { id: Number(id) },
-            select: {
-                id: true,
-                userId: true,
-                total: true,
-                paymentMethod: true,
-                paymentStatus: true,
-                createdAt: true,
-                updatedAt: true,
-                user: {
-                    select: {
-                        id: true,
-                        name: true
-                    }
-                },
-                items: {
-                    select: {
-                        id: true,
-                        qty: true,
-                        price: true,
-                        subtotal: true,
-                        product: {
-                            select: {
-                                id: true,
-                                name: true,
-                                price: true
-                            }
-                        }
-                    }
-                }
+            include: {
+                user: { select: { id: true, name: true } },
+                items: { include: { product: { select: { id: true, name: true, price: true } } } }
             }
         });
 
@@ -177,7 +128,7 @@ const transactionService = {
         }
 
         if (user.role !== 'admin' && transaction.userId !== user.id) {
-            const error = new Error('Kamu tidak memiliki akses ke transaksi ini');
+            const error = new Error('Akses ditolak');
             error.statusCode = 403;
             throw error;
         }

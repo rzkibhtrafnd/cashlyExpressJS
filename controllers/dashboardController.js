@@ -1,7 +1,8 @@
 const dashboardService = require('../services/dashboardService');
+const asyncHandler = require('../middlewares/asyncHandler');
 
 const dashboardController = {
-    index: async (req, res) => {
+    index: asyncHandler(async (req, res) => {
         const userRole = req.user.role;
         const userId = req.user.id;
 
@@ -19,7 +20,7 @@ const dashboardController = {
             role: userRole,
             data: data
         });
-    }
+    })
 };
 
 module.exports = dashboardController;

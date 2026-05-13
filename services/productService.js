@@ -1,6 +1,8 @@
 const prisma = require('../config/database');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
+
+const UPLOAD_PATH = path.join(__dirname, '../public/uploads');
 
 const productService = {
     getAllProducts: async () => {
@@ -53,7 +55,6 @@ const productService = {
     createProduct: async (data) => {
         const {categoryId, name, price, image} = data;
 
-        // Cek apakah kategori valid
         const categoryExists = await prisma.category.findUnique({
             where: { id: Number(categoryId) }
         });
@@ -91,7 +92,6 @@ const productService = {
     updateProduct: async (id, data) => {
         const { categoryId, name, price, newImage } = data;
 
-        // Cek apakah produk ada
         const existingProduct = await prisma.product.findUnique({
             where: { id: Number(id) }
         });
@@ -102,29 +102,26 @@ const productService = {
             throw error;
         }
 
-        // Cek apakah kategori valid
-        const categoryExists = await prisma.category.findUnique({
-            where: { id: Number(categoryId) }
-        });
-
-        if (!categoryExists) {
-            const error = new Error('Kategori tidak valid');
-            error.statusCode = 400;
-            throw error;
+        if (categoryId) {
+            const categoryExists = await prisma.category.findUnique({
+                where: { id: Number(categoryId) }
+            });
+            if (!categoryExists) {
+                const error = new Error('Kategori tidak valid');
+                error.statusCode = 400;
+                throw error;
+            }
         }
         
-        // Hapus gambar lama jika ada dan diganti dengan yang baru
         if (newImage && existingProduct.image) {
-            const oldImagePath = path.join(__dirname, '..', 'uploads', existingProduct.image);
-            if (fs.existsSync(oldImagePath)) {
-                fs.unlinkSync(oldImagePath);
-            }
+            const oldPath = path.join(UPLOAD_PATH, existingProduct.image);
+            await fs.unlink(oldPath).catch(() => null);
         }
 
         return await prisma.product.update({
             where: { id: Number(id) },
             data: {
-                categoryId: parseInt(categoryId),
+                categoryId: categoryId ? parseInt(categoryId) : undefined,
                 name,
                 price: parseFloat(price),
                 image: newImage || existingProduct.image
@@ -147,7 +144,6 @@ const productService = {
     },
 
     deleteProduct: async (id) => {
-        // Cek apakah produk ada
         const existingProduct = await prisma.product.findUnique({
             where: { id: Number(id) }
         });
@@ -158,12 +154,9 @@ const productService = {
             throw error;
         }
 
-        // Hapus gambar jika ada
         if (existingProduct.image) {
-            const imagePath = path.join(__dirname, '..', 'uploads', existingProduct.image);
-            if (fs.existsSync(imagePath)) {
-                fs.unlinkSync(imagePath);
-            }
+            const imagePath = path.join(UPLOAD_PATH, existingProduct.image);
+            await fs.unlink(imagePath).catch(() => null);
         }
 
         await prisma.product.delete({

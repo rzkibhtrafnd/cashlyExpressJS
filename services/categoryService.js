@@ -23,7 +23,6 @@ const categoryService = {
     createCategory: async (data) => {
         const { name } = data;
 
-        // Cek nama kembar di database
         const existingCategory = await prisma.category.findFirst({
             where: { name }
         });
@@ -42,7 +41,6 @@ const categoryService = {
     updateCategory: async (id, data) => {
         const { name } = data;
 
-        // Cek apakah kategori ada
         const existingCategory = await prisma.category.findUnique({
             where: { id: Number(id) }
         });
@@ -53,7 +51,6 @@ const categoryService = {
             throw error;
         }
 
-        // Cek nama kembar (kecuali kategori ini sendiri)
         if (name && name !== existingCategory.name) {
             const duplicateCategory = await prisma.category.findFirst({
                 where: { 
@@ -76,7 +73,6 @@ const categoryService = {
     },
 
     deleteCategory: async (id) => {
-        // Cek apakah kategori ada
         const existingCategory = await prisma.category.findUnique({
             where: { id: Number(id) }
         });

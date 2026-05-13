@@ -1,60 +1,43 @@
 const prisma = require('../config/database');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 
 const settingService = {
     getSetting: async () => {
-        let setting = await prisma.setting.findUnique({
-            where: { id: 1 }
-        });
-
-        if (!setting) {
-            return {};
-        }
-        return setting;
+        const setting = await prisma.setting.findUnique({ where: { id: 1 } });
+        return setting || {};
     },
 
     updateSetting: async (data) => {
-        const { companyName, email, phone, address, wifi, wifiPassword, imgLogo, imgQris } = data;
+        const existing = await prisma.setting.findUnique({ where: { id: 1 } });
 
-        const existingSetting = await prisma.setting.findUnique({ where: { id: 1 } });
-
-        const deleteOldImage = (oldImageName) => {
-            if (oldImageName) {
-                const imagePath = path.join(__dirname, '../public/uploads', oldImageName);
-                if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
-                }
-            }
+        const updateData = {
+            companyName: data.companyName ?? existing?.companyName,
+            email: data.email ?? existing?.email,
+            phone: data.phone ?? existing?.phone,
+            address: data.address ?? existing?.address,
+            wifi: data.wifi ?? existing?.wifi,
+            wifiPassword: data.wifiPassword ?? existing?.wifiPassword,
+            imgLogo: data.imgLogo ?? existing?.imgLogo,
+            imgQris: data.imgQris ?? existing?.imgQris
         };
 
-        if (imgLogo && existingSetting?.imgLogo) {
-            deleteOldImage(existingSetting.imgLogo);
-        }
-
-        if (imgQris && existingSetting?.imgQris) {
-            deleteOldImage(existingSetting.imgQris);
-        }
-
-        const upsertData = {
-            companyName: companyName || existingSetting?.companyName || null,
-            email: email || existingSetting?.email || null,
-            phone: phone || existingSetting?.phone || null,
-            address: address || existingSetting?.address || null,
-            wifi: wifi || existingSetting?.wifi || null,
-            wifiPassword: wifiPassword || existingSetting?.wifiPassword || null,
-            imgLogo: imgLogo || existingSetting?.imgLogo || null,
-            imgQris: imgQris || existingSetting?.imgQris || null
-        };
-
-        return await prisma.setting.upsert({
+        const result = await prisma.setting.upsert({
             where: { id: 1 },
-            update: upsertData,
-            create: {
-                id: 1,
-                ...upsertData
-            }
+            update: updateData,
+            create: { id: 1, ...updateData }
         });
+
+        const uploadDir = path.join(__dirname, '../public/uploads');
+        
+        if (data.imgLogo && existing?.imgLogo && data.imgLogo !== existing.imgLogo) {
+            await fs.unlink(path.join(uploadDir, existing.imgLogo)).catch(() => null);
+        }
+        if (data.imgQris && existing?.imgQris && data.imgQris !== existing.imgQris) {
+            await fs.unlink(path.join(uploadDir, existing.imgQris)).catch(() => null);
+        }
+
+        return result;
     }
 };
 

@@ -3,45 +3,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const authService = {
-    register: async (data) => {
-        const {name, email, password, role} = data;
-
-        // validasi email
-        const existingUser = await prisma.user.findUnique({
-            where: { email: email }
-        });
-
-        if (existingUser) {
-            const error = new Error('Email sudah terdaftar');
-            error.statusCode = 400;
-            throw error;
-        }
-
-        // hash password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const validRole = role || 'user';
-
-        // Simpan user
-        return await prisma.user.create({
-            data: {
-                name: name,
-                email: email,
-                password: hashedPassword,
-                role: validRole
-            },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                createdAt: true,
-                updatedAt: true
-            }
-        });
-    },
-
     login: async (data) => {
         // Cek user
         const { email, password } = data;
@@ -51,17 +12,9 @@ const authService = {
             where: { email: email }
         });
 
-        if (!user) {
-            const error = new Error('Email tidak ditemukan');
-            error.statusCode = 400;
-            throw error;
-        }
-
-        // Cek password
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-            const error = new Error('Password salah');
-            error.statusCode = 400;
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            const error = new Error('Email atau password salah');
+            error.statusCode = 401;
             throw error;
         }
 
@@ -69,7 +22,7 @@ const authService = {
         const token = jwt.sign(
             { id: user.id, role: user.role }, 
             process.env.JWT_SECRET, 
-            { expiresIn: '1d' }
+            { expiresIn: process.env.JWT_EXPIRES_IN || '1d'}
         );
 
         return {

@@ -1,6 +1,5 @@
 const prisma = require('../config/database');
 const bcrypt = require('bcryptjs');
-const { create, update } = require('../controllers/productController');
 
 const userService = {
     getAllUsers: async () => {
@@ -110,7 +109,7 @@ const userService = {
         // Hash password
         if (password) {
             const salt = await bcrypt.genSalt(10);
-            hashedPassword = await bcrypt.hash(password, salt);
+            updateData.password = await bcrypt.hash(password, salt);
         }
 
         return await prisma.user.update({
@@ -128,20 +127,18 @@ const userService = {
     },
 
     deleteUser: async (id) => {
-        // Cek apakah user ada
-        const existingUser = await prisma.user.findUnique({
-            where: { id: Number(id) }
-        });
-
-        if(!existingUser){
-            const error = new Error('User tidak ditemukan');
-            error.statusCode = 404;
-            throw error;
+        try {
+            await prisma.user.delete({
+                where: { id: Number(id) }
+            });
+        } catch (err) {
+            if (err.code === 'P2025') {
+                const error = new Error('User tidak ditemukan');
+                error.statusCode = 404;
+                throw error;
+            }
+            throw err; 
         }
-
-        await prisma.user.delete({
-            where: { id: Number(id) }
-        });
     }
 }
 
