@@ -50,40 +50,45 @@ npm run dev
 npm start
 ```
 ---
+## Alur Pengguna (Flow)
+
+### Admin Flow
+1. Autentikasi: Admin melakukan login untuk mendapatkan JWT Token.
+2. Manajemen Pengguna: Admin dapat membuat, melihat, memperbarui, atau menghapus akun Kasir.
+3. Konfigurasi Toko: Admin mengatur identitas kafe (Nama, Alamat, WiFi, Logo, dan QRIS).
+4. Manajemen Katalog: Admin mengelola kategori menu dan detail produk (termasuk upload gambar menu).
+5. Monitoring Dashboard: Admin melihat statistik performa kafe secara keseluruhan (total pendapatan, produk terlaris, dan jumlah transaksi).
+6. Proses Transaksi:
+   - Kasir memilih produk berdasarkan pesanan pelanggan (Input via Cart).
+   - Memilih metode pembayaran (Cash/QRIS).
+   - Sistem menghitung total secara otomatis di sisi server.
+7. Riwayat Penjualan: Admin dapat melihat daftar semua transaksi.
+8. Laporan: Admin dapat menarik laporan transaksi berdasarkan rentang waktu tertentu.
+
+### Kasir Flow
+1. Autentikasi: Kasir login ke sistem.
+2. Dashboard Individu: Kasir melihat ringkasan penjualan yang mereka lakukan sendiri pada hari tersebut.
+3. Proses Transaksi:
+   - Kasir memilih produk berdasarkan pesanan pelanggan (Input via Cart).
+   - Memilih metode pembayaran (Cash/QRIS).
+   - Sistem menghitung total secara otomatis di sisi server.
+7. Riwayat Penjualan: Kasir dapat melihat daftar transaksi yang pernah mereka tangani.
+ H
+## Penanganan Error (Error Handling)
+API mengembalikan kode status HTTP standar untuk menunjukkan keberhasilan atau kegagalan permintaan:
+
+- 200 OK: Permintaan berhasil diproses.
+- 201 Created: Sumber daya baru (User/Produk/Transaksi) berhasil dibuat.
+- 400 Bad Request: Permintaan tidak valid (input field kosong atau format salah).
+- 401 Unauthorized: Token JWT tidak valid, kedaluwarsa, atau sudah di-blacklist (logout).
+- 403 Forbidden: Kasir mencoba mengakses menu Admin (seperti manajemen user).
+- 404 Not Found: Data (Produk/User/Transaksi) tidak ditemukan di database.
+- 500 Internal Server Error: Terjadi kesalahan pada logika server atau database.
+---
+
 ## API Endpoints
 
 ### Auth Controller
-
-#### Register
-**Request:**
-```
-URL: /api/register
-Method: POST
-Body:
-{
-    "name": "kasir3",
-    "email": "kasir3@mail.com",
-    "password": "password123",
-    "role": "kasir"
-}
-```
-
-**Response (Success - 201):**
-```json
-{
-    "status": true,
-    "message": "User berhasil didaftarkan",
-    "data": {
-        "id": 7,
-        "name": "kasir3",
-        "email": "kasir3@mail.com",
-        "role": "kasir",
-        "createdAt": "2026-05-12T13:37:48.572Z",
-        "updatedAt": "2026-05-12T13:37:48.572Z"
-    }
-}
-```
-
 #### Login 
 **Request:**
 ```
@@ -127,6 +132,67 @@ Authorization: Bearer_Token 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### Admin Menu
+#### Dashboard
+**Request:**
+```
+URL: /api/dashboard
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Data dashboard berhasil diambil",
+    "role": "admin",
+    "data": {
+        "categoriesCount": 3,
+        "productsCount": 2,
+        "transactionsCount": 2,
+        "totalRevenue": 85000,
+        "recentTransactions": [
+            {
+                "id": 2,
+                "userId": 1,
+                "total": "47000",
+                "paymentStatus": "paid",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "user": {
+                    "id": 1,
+                    "name": "admin"
+                }
+            },
+            {
+                "id": 1,
+                "userId": 1,
+                "total": "38000",
+                "paymentStatus": "paid",
+                "createdAt": "2026-05-10T06:26:03.239Z",
+                "user": {
+                    "id": 1,
+                    "name": "admin"
+                }
+            }
+        ],
+        "topProducts": [
+            {
+                "id": 2,
+                "name": "Red Velvet",
+                "totalSold": 4,
+                "totalRevenue": 70000
+            },
+            {
+                "id": 5,
+                "name": "Es Teh",
+                "totalSold": 1,
+                "totalRevenue": 7000
+            }
+        ]
+    }
+}
+```
+
 ### Setting
 #### Index
 **Request:**
@@ -433,39 +499,591 @@ Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 }
 ```
 
+### Product
+#### Index
+**Request:**
+```
+URL: /api/products
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
-## Use Cases
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Daftar produk berhasil diambil",
+    "data": [
+        {
+            "id": 2,
+            "name": "Nasi Goreng Spesial",
+            "price": "15000",
+            "image": "1778394894708.jpg",
+            "createdAt": "2026-05-08T15:05:31.045Z",
+            "updatedAt": "2026-05-10T06:35:03.074Z",
+            "category": {
+                "id": 5,
+                "name": "Makanan"
+            }
+        }
+    ]
+}
+```
+#### Show
+**Request:**
+```
+URL: /api/products/ID
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
 
-### User Flow
-1. User registers or logs in to get an authentication token
-2. User browses available properties (can filter by city, type, etc.)
-3. User views details of a specific property
-4. User views available rooms in the property
-5. User checks availability and pricing of a specific room
-6. User makes a booking by providing personal information
-7. User uploads payment proof
-8. User can view their booking history and payment status
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Detail produk berhasil diambil",
+    "data": {
+        "id": 2,
+        "name": "Red Velvet",
+        "price": "20000",
+        "image": "1778394894708.jpg",
+        "createdAt": "2026-05-08T15:05:31.045Z",
+        "updatedAt": "2026-05-13T02:53:30.420Z",
+        "category": {
+            "id": 8,
+            "name": "Minuman"
+        }
+    }
+}
+```
 
-### Owner Flow
-1. Owner logs in to get an authentication token
-2. Owner creates or updates their property listings
-3. Owner manages rooms within their properties
-4. Owner sets availability and pricing for rooms
-5. Owner views bookings made for their properties
-6. Owner processes payments and updates payment status
+#### Create
+**Request:**
+```
+URL: /api/products
+Method: POST
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Form-date:
+categoryId: 8
+name: Red Velvet Ice
+price: 20000
+image: File()
+```
 
-### Admin Flow
-1. Admin manages owner accounts
-2. Admin can create, update, or delete owner accounts
+**Response (Success - 201):**
+```json
+{
+    "status": true,
+    "message": "Produk berhasil ditambahkan",
+    "data": {
+        "id": 4,
+        "name": "Red Velvet Ice",
+        "price": "20000",
+        "image": "image-1778640759069-505090783.jpg",
+        "createdAt": "2026-05-13T02:52:39.072Z",
+        "updatedAt": "2026-05-13T02:52:39.072Z",
+        "category": {
+            "id": 8,
+            "name": "Minuman"
+        }
+    }
+}
+```
 
-## Error Handling
-The API returns appropriate HTTP status codes along with error messages:
+#### Update
+**Request:**
+```
+URL: /api/categories/ID
+Method: PUT
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Form-date:
+categoryId: 8
+name: Red Velvet
+price: 20000
+image: File()
+```
+```
 
-- 200 OK: The request was successful
-- 201 Created: A new resource was successfully created
-- 400 Bad Request: The request contains invalid parameters
-- 401 Unauthorized: Authentication is required or credentials are invalid
-- 403 Forbidden: The authenticated user doesn't have permission to access the resource
-- 404 Not Found: The requested resource doesn't exist
-- 422 Unprocessable Entity: The request data was invalid
-- 500 Internal Server Error: An error occurred on the server
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Produk berhasil diperbarui",
+    "data": {
+        "id": 2,
+        "name": "Red Velvet",
+        "price": "20000",
+        "image": "1778394894708.jpg",
+        "createdAt": "2026-05-08T15:05:31.045Z",
+        "updatedAt": "2026-05-13T02:53:30.420Z",
+        "category": {
+            "id": 8,
+            "name": "Minuman"
+        }
+    }
+}
+```
+
+#### Delete
+**Request:**
+```
+URL: /api/categories/ID
+Method: DELETE
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Produk berhasil dihapus beserta gambarnya"
+}
+```
+
+### Transaction
+#### Index
+**Request:**
+```
+URL: /api/transactions
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Data transaksi berhasil diambil",
+    "data": [
+        {
+            "id": 1,
+            "userId": 1,
+            "total": "38000",
+            "paymentMethod": "qris",
+            "paymentStatus": "paid",
+            "createdAt": "2026-05-10T06:26:03.239Z",
+            "user": {
+                "id": 1,
+                "name": "admin"
+            }
+        }
+    ],
+    "meta": {
+        "page": 1,
+        "limit": 10,
+        "totalItems": 1,
+        "totalPages": 1
+    }
+}
+```
+#### Report
+**Request:**
+```
+URL: /api/transactions/report
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Laporan transaksi berhasil diambil",
+    "data": [
+        {
+            "id": 2,
+            "userId": 1,
+            "total": "47000",
+            "paymentMethod": "qris",
+            "paymentStatus": "paid",
+            "createdAt": "2026-05-13T02:58:29.850Z",
+            "updatedAt": "2026-05-13T02:58:29.850Z",
+            "user": {
+                "id": 1,
+                "name": "admin"
+            }
+        },
+        {
+            "id": 1,
+            "userId": 1,
+            "total": "38000",
+            "paymentMethod": "qris",
+            "paymentStatus": "paid",
+            "createdAt": "2026-05-10T06:26:03.239Z",
+            "updatedAt": "2026-05-10T06:26:03.239Z",
+            "user": {
+                "id": 1,
+                "name": "admin"
+            }
+        }
+    ]
+}
+```
+
+#### Show
+**Request:**
+```
+URL: /api/tranactions/ID
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Detail transaksi berhasil diambil",
+    "data": {
+        "id": 2,
+        "userId": 1,
+        "total": "47000",
+        "paymentMethod": "qris",
+        "paymentStatus": "paid",
+        "createdAt": "2026-05-13T02:58:29.850Z",
+        "updatedAt": "2026-05-13T02:58:29.850Z",
+        "user": {
+            "id": 1,
+            "name": "admin"
+        },
+        "items": [
+            {
+                "id": 3,
+                "transactionId": 2,
+                "productId": 2,
+                "qty": 2,
+                "price": "20000",
+                "subtotal": "40000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z",
+                "product": {
+                    "id": 2,
+                    "name": "Red Velvet",
+                    "price": "20000"
+                }
+            },
+            {
+                "id": 4,
+                "transactionId": 2,
+                "productId": 5,
+                "qty": 1,
+                "price": "7000",
+                "subtotal": "7000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z",
+                "product": {
+                    "id": 5,
+                    "name": "Es Teh",
+                    "price": "7000"
+                }
+            }
+        ]
+    }
+}
+```
+
+#### Create
+**Request:**
+```
+URL: /api/transactions
+Method: POST
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Body:
+{
+    "paymentMethod": "qris",
+    "cart": [
+        {
+            "id": 2,
+            "qty": 2
+        },
+        {
+            "id": 5,
+            "qty": 1
+        }
+    ]
+}
+```
+
+**Response (Success - 201):**
+```json
+{
+    "status": true,
+    "message": "Transaksi berhasil disimpan",
+    "data": {
+        "id": 2,
+        "userId": 1,
+        "total": "47000",
+        "paymentMethod": "qris",
+        "paymentStatus": "paid",
+        "createdAt": "2026-05-13T02:58:29.850Z",
+        "updatedAt": "2026-05-13T02:58:29.850Z",
+        "items": [
+            {
+                "id": 3,
+                "transactionId": 2,
+                "productId": 2,
+                "qty": 2,
+                "price": "20000",
+                "subtotal": "40000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z"
+            },
+            {
+                "id": 4,
+                "transactionId": 2,
+                "productId": 5,
+                "qty": 1,
+                "price": "7000",
+                "subtotal": "7000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z"
+            }
+        ]
+    }
+}
+```
+
+### Kasir Menu
+#### Dashboard
+**Request:**
+```
+URL: /api/dashboard
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Data dashboard berhasil diambil",
+    "role": "kasir",
+    "data": {
+        "myTransactionsCount": 1,
+        "myRevenue": 47000,
+        "myRecentTransactions": [
+            {
+                "id": 3,
+                "total": "47000",
+                "paymentStatus": "paid",
+                "createdAt": "2026-05-13T03:03:55.420Z"
+            }
+        ]
+    }
+}
+```
+
+### Product
+#### Index
+**Request:**
+```
+URL: /api/products
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Daftar produk berhasil diambil",
+    "data": [
+        {
+            "id": 2,
+            "name": "Nasi Goreng Spesial",
+            "price": "15000",
+            "image": "1778394894708.jpg",
+            "createdAt": "2026-05-08T15:05:31.045Z",
+            "updatedAt": "2026-05-10T06:35:03.074Z",
+            "category": {
+                "id": 5,
+                "name": "Makanan"
+            }
+        }
+    ]
+}
+```
+#### Show
+**Request:**
+```
+URL: /api/products/ID
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Detail produk berhasil diambil",
+    "data": {
+        "id": 2,
+        "name": "Red Velvet",
+        "price": "20000",
+        "image": "1778394894708.jpg",
+        "createdAt": "2026-05-08T15:05:31.045Z",
+        "updatedAt": "2026-05-13T02:53:30.420Z",
+        "category": {
+            "id": 8,
+            "name": "Minuman"
+        }
+    }
+}
+```
+### Transaction
+#### Index
+**Request:**
+```
+URL: /api/transactions
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Data transaksi berhasil diambil",
+    "data": [
+        {
+            "id": 1,
+            "userId": 1,
+            "total": "38000",
+            "paymentMethod": "qris",
+            "paymentStatus": "paid",
+            "createdAt": "2026-05-10T06:26:03.239Z",
+            "user": {
+                "id": 1,
+                "name": "admin"
+            }
+        }
+    ],
+    "meta": {
+        "page": 1,
+        "limit": 10,
+        "totalItems": 1,
+        "totalPages": 1
+    }
+}
+```
+
+#### Show
+**Request:**
+```
+URL: /api/tranactions/ID
+Method: GET
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**Response (Success - 200):**
+```json
+{
+    "status": true,
+    "message": "Detail transaksi berhasil diambil",
+    "data": {
+        "id": 2,
+        "userId": 1,
+        "total": "47000",
+        "paymentMethod": "qris",
+        "paymentStatus": "paid",
+        "createdAt": "2026-05-13T02:58:29.850Z",
+        "updatedAt": "2026-05-13T02:58:29.850Z",
+        "user": {
+            "id": 1,
+            "name": "admin"
+        },
+        "items": [
+            {
+                "id": 3,
+                "transactionId": 2,
+                "productId": 2,
+                "qty": 2,
+                "price": "20000",
+                "subtotal": "40000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z",
+                "product": {
+                    "id": 2,
+                    "name": "Red Velvet",
+                    "price": "20000"
+                }
+            },
+            {
+                "id": 4,
+                "transactionId": 2,
+                "productId": 5,
+                "qty": 1,
+                "price": "7000",
+                "subtotal": "7000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z",
+                "product": {
+                    "id": 5,
+                    "name": "Es Teh",
+                    "price": "7000"
+                }
+            }
+        ]
+    }
+}
+```
+
+#### Create
+**Request:**
+```
+URL: /api/transactions
+Method: POST
+Authorization: Bearer 2|Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Body:
+{
+    "paymentMethod": "qris",
+    "cart": [
+        {
+            "id": 2,
+            "qty": 2
+        },
+        {
+            "id": 5,
+            "qty": 1
+        }
+    ]
+}
+```
+
+**Response (Success - 201):**
+```json
+{
+    "status": true,
+    "message": "Transaksi berhasil disimpan",
+    "data": {
+        "id": 2,
+        "userId": 1,
+        "total": "47000",
+        "paymentMethod": "qris",
+        "paymentStatus": "paid",
+        "createdAt": "2026-05-13T02:58:29.850Z",
+        "updatedAt": "2026-05-13T02:58:29.850Z",
+        "items": [
+            {
+                "id": 3,
+                "transactionId": 2,
+                "productId": 2,
+                "qty": 2,
+                "price": "20000",
+                "subtotal": "40000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z"
+            },
+            {
+                "id": 4,
+                "transactionId": 2,
+                "productId": 5,
+                "qty": 1,
+                "price": "7000",
+                "subtotal": "7000",
+                "createdAt": "2026-05-13T02:58:29.850Z",
+                "updatedAt": "2026-05-13T02:58:29.850Z"
+            }
+        ]
+    }
+}
+```
