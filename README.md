@@ -7,7 +7,6 @@
 * **Transaction Security**: Validasi harga produk langsung dari database untuk mencegah manipulasi harga dari frontend.
 * **Dashboard Analytics**: Statistik cerdas yang berbeda untuk Admin (pendapatan total) dan Kasir (pencapaian individu).
 * **File Management**: Upload logo perusahaan dan gambar QRIS untuk pembayaran.
-* **Automated Testing**: Dilengkapi dengan Unit Testing menggunakan Jest & Supertest.
 
 ## Persyaratan Sistem
 - **Node.js** (v18 ke atas)
